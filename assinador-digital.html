@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assinador Digital Web</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .view { display: none; }
+        .view.active { display: block; }
+        .word-break { word-break: break-all; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-2xl mx-auto bg-gray-800 rounded-2xl shadow-lg p-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-cyan-400">Assinador Digital Web</h1>
+            <p class="text-gray-400 mt-2">Demonstração de Assinaturas Digitais com a Web Crypto API</p>
+        </header>
+
+        <nav class="flex justify-center border-b border-gray-700 mb-8">
+            <button data-view="home" class="nav-btn py-3 px-6 text-gray-300 font-medium border-b-2 border-transparent hover:text-cyan-400 focus:outline-none">Início</button>
+            <button data-view="assinar" class="nav-btn py-3 px-6 text-gray-300 font-medium border-b-2 border-transparent hover:text-cyan-400 focus:outline-none">Assinar</button>
+            <button data-view="verificar" class="nav-btn py-3 px-6 text-gray-300 font-medium border-b-2 border-transparent hover:text-cyan-400 focus:outline-none">Verificar</button>
+            <button data-view="invalidar" class="nav-btn py-3 px-6 text-gray-300 font-medium border-b-2 border-transparent hover:text-cyan-400 focus:outline-none">Invalidar</button>
+        </nav>
+
+        <main>
+            <!-- Visão de Início / Cadastro / Login -->
+            <div id="view-home" class="view active">
+                <div id="welcome-section">
+                    <h2 class="text-2xl font-semibold mb-4 text-white">Bem-vindo!</h2>
+                    <p class="text-gray-400 mb-6">Esta aplicação demonstra o processo de assinatura digital. Você pode se cadastrar para gerar um par de chaves (pública e privada), assinar mensagens e verificar a autenticidade de assinaturas.</p>
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <p class="text-sm text-gray-300"><strong class="text-cyan-400">Como funciona:</strong> Ao se cadastrar, um par de chaves <strong class="text-yellow-400">RSA-PSS</strong> é gerado e salvo localmente no seu navegador. A chave privada é usada para assinar o hash (<strong class="text-yellow-400">SHA-256</strong>) de suas mensagens, e a chave pública pode ser usada por qualquer um para verificar a assinatura.</p>
+                    </div>
+                </div>
+
+                <div id="auth-section" class="mt-8">
+                    <!-- Formulário de Cadastro -->
+                    <div id="register-form-container">
+                        <h3 class="text-xl font-semibold mb-4 text-white">Novo Usuário? Cadastre-se</h3>
+                        <form id="register-form">
+                            <input type="text" id="register-username" placeholder="Nome de usuário" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none" required>
+                            <input type="password" id="register-password" placeholder="Senha" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none" required>
+                            <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Cadastrar e Gerar Chaves</button>
+                        </form>
+                        <p class="text-center mt-4 text-sm text-gray-400">Já tem uma conta? <a href="#" id="show-login" class="text-cyan-400 hover:underline">Faça Login</a></p>
+                    </div>
+                    <!-- Formulário de Login -->
+                    <div id="login-form-container" class="hidden">
+                        <h3 class="text-xl font-semibold mb-4 text-white">Acessar Conta</h3>
+                        <form id="login-form">
+                            <input type="text" id="login-username" placeholder="Nome de usuário" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none" required>
+                            <input type="password" id="login-password" placeholder="Senha" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none" required>
+                            <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Login</button>
+                        </form>
+                        <p class="text-center mt-4 text-sm text-gray-400">Não tem uma conta? <a href="#" id="show-register" class="text-cyan-400 hover:underline">Cadastre-se</a></p>
+                    </div>
+                </div>
+                 <div id="user-info" class="hidden mt-8 bg-gray-700 p-4 rounded-lg">
+                    <p>Logado como: <strong id="logged-in-user" class="text-cyan-400"></strong></p>
+                    <button id="logout-btn" class="mt-2 text-sm text-red-400 hover:underline">Sair</button>
+                </div>
+            </div>
+
+            <!-- Visão de Assinar -->
+            <div id="view-assinar" class="view">
+                 <div id="assinar-login-required" class="text-center">
+                    <p class="text-yellow-400">Você precisa estar logado para assinar um documento.</p>
+                    <p class="text-gray-400 mt-2">Vá para a página de <a href="#" class="text-cyan-400 hover:underline" onclick="switchView('home')">Início</a> para fazer login ou se cadastrar.</p>
+                 </div>
+                 <div id="assinar-content" class="hidden">
+                    <h2 class="text-2xl font-semibold mb-4 text-white">Assinar Mensagem</h2>
+                    <form id="sign-form">
+                        <textarea id="message-to-sign" rows="8" placeholder="Digite o texto que você deseja assinar aqui..." class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none resize-none"></textarea>
+                        <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Gerar Assinatura Digital</button>
+                    </form>
+                    <div id="signature-result" class="mt-6 hidden bg-gray-900 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-green-400 mb-2">Mensagem Assinada com Sucesso!</h3>
+                        <div>
+                            <p class="text-gray-400 font-medium">ID da Assinatura:</p>
+                            <p id="signature-id" class="text-sm word-break bg-gray-700 p-2 rounded-md"></p>
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-gray-400 font-medium">Assinatura (Base64):</p>
+                            <p id="signature-data" class="text-sm word-break bg-gray-700 p-2 rounded-md"></p>
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-gray-400 font-medium">Chave Pública do Signatário (JWK):</p>
+                            <pre id="signer-public-key" class="text-xs word-break bg-gray-700 p-2 rounded-md overflow-x-auto"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visão de Verificar -->
+            <div id="view-verificar" class="view">
+                <h2 class="text-2xl font-semibold mb-4 text-white">Verificar Assinatura</h2>
+                <form id="verify-form">
+                    <label for="verify-signature-id" class="block mb-2 text-sm font-medium text-gray-300">Informe o ID da Assinatura</label>
+                    <input type="text" id="verify-signature-id" placeholder="Cole o ID da assinatura aqui" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                    <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Verificar Autenticidade</button>
+                </form>
+
+                <div id="verification-result" class="mt-6 hidden p-4 rounded-lg">
+                    <h3 id="verification-status" class="text-2xl font-bold mb-4 text-center"></h3>
+                    <div id="verification-details" class="bg-gray-700 p-4 rounded-md">
+                        <p><strong>Signatário:</strong> <span id="verified-signer"></span></p>
+                        <p><strong>Data/Hora da Assinatura:</strong> <span id="verified-timestamp"></span></p>
+                        <p><strong>Algoritmo:</strong> <span id="verified-algorithm"></span></p>
+                        <div class="mt-2">
+                            <p><strong>Mensagem Original:</strong></p>
+                            <p id="verified-message" class="text-sm bg-gray-800 p-2 rounded-md"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Visão de Invalidar -->
+            <div id="view-invalidar" class="view">
+                <h2 class="text-2xl font-semibold mb-4 text-white">Invalidar Assinatura (Teste)</h2>
+                <p class="text-gray-400 mb-6 text-sm">Use esta ferramenta para corromper intencionalmente uma assinatura e testar o fluxo de verificação negativa.</p>
+                <form id="invalidate-search-form">
+                    <label for="invalidate-signature-id" class="block mb-2 text-sm font-medium text-gray-300">Informe o ID da Assinatura</label>
+                    <input type="text" id="invalidate-signature-id" placeholder="Cole o ID da assinatura aqui" class="w-full bg-gray-700 border border-gray-600 rounded-md px-4 py-2 mb-4 focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                    <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Buscar Assinatura</button>
+                </form>
+
+                <div id="invalidation-details" class="mt-6 hidden bg-gray-700 p-4 rounded-lg">
+                    <p class="text-gray-400 font-medium">ID da Assinatura:</p>
+                    <p id="invalidate-id-display" class="text-sm word-break bg-gray-800 p-2 rounded-md mb-3"></p>
+                    <p class="text-gray-400 font-medium">Assinatura Atual (Base64):</p>
+                    <p id="invalidate-current-signature" class="text-sm word-break bg-gray-800 p-2 rounded-md"></p>
+                    <div class="flex space-x-4 mt-4">
+                        <button id="invalidate-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Invalidar Assinatura</button>
+                        <button id="restore-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 hidden">Restaurar Original</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+        
+        <div id="toast" class="fixed bottom-5 right-5 bg-red-500 text-white py-2 px-4 rounded-lg shadow-lg transition-opacity duration-300 opacity-0">
+            <p id="toast-message"></p>
+        </div>
+    </div>
+
+<script>
+// --- SIMULAÇÃO DE BANCO DE DADOS E ESTADO DA APLICAÇÃO ---
+const db = {
+    users: JSON.parse(localStorage.getItem('digital_signer_users')) || {},
+    signatures: JSON.parse(localStorage.getItem('digital_signer_signatures')) || {},
+    logs: JSON.parse(localStorage.getItem('digital_signer_logs')) || [],
+
+    save() {
+        localStorage.setItem('digital_signer_users', JSON.stringify(this.users));
+        localStorage.setItem('digital_signer_signatures', JSON.stringify(this.signatures));
+        localStorage.setItem('digital_signer_logs', JSON.stringify(this.logs));
+    }
+};
+
+let currentUser = sessionStorage.getItem('digital_signer_currentUser');
+
+
+// --- FUNÇÕES CRIPTOGRÁFICAS (WEB CRYPTO API) ---
+
+const cryptoConfig = {
+    keyAlgorithm: {
+        name: 'RSA-PSS',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-256',
+    },
+    signAlgorithm: {
+        name: 'RSA-PSS',
+        saltLength: 32,
+    },
+    hashAlgorithm: 'SHA-256'
+};
+
+/**
+ * Gera um par de chaves RSA-PSS (pública e privada).
+ * @returns {Promise<CryptoKeyPair>} O par de chaves gerado.
+ */
+async function generateKeys() {
+    return window.crypto.subtle.generateKey(
+        cryptoConfig.keyAlgorithm,
+        true, // extractable
+        ['sign', 'verify']
+    );
+}
+
+/**
+ * Assina uma mensagem usando a chave privada.
+ * @param {CryptoKey} privateKey - A chave privada para assinar.
+ * @param {string} message - A mensagem a ser assinada.
+ * @returns {Promise<string>} A assinatura em formato Base64.
+ */
+async function signMessage(privateKey, message) {
+    const encodedMessage = new TextEncoder().encode(message);
+    const signatureBuffer = await window.crypto.subtle.sign(
+        cryptoConfig.signAlgorithm,
+        privateKey,
+        encodedMessage
+    );
+    return bufferToBase64(signatureBuffer);
+}
+
+/**
+ * Verifica uma assinatura usando a chave pública.
+ * Esta função agora LANÇA um erro se algo der errado, em vez de retornar false.
+ * @param {CryptoKey} publicKey - A chave pública do signatário.
+ * @param {string} signatureBase64 - A assinatura em Base64.
+ * @param {string} originalMessage - A mensagem original.
+ * @returns {Promise<boolean>} True se a assinatura for válida. Lança um erro caso contrário.
+ */
+async function verifySignature(publicKey, signatureBase64, originalMessage) {
+    // A função base64ToBuffer lançará um erro se a string for malformada.
+    const signature = base64ToBuffer(signatureBase64);
+    const encodedMessage = new TextEncoder().encode(originalMessage);
+    
+    // A função window.crypto.subtle.verify também pode lançar um erro se os dados forem inválidos.
+    return await window.crypto.subtle.verify(
+        cryptoConfig.signAlgorithm,
+        publicKey,
+        signature,
+        encodedMessage
+    );
+}
+
+
+// --- FUNÇÕES AUXILIARES ---
+
+/**
+ * Converte um ArrayBuffer para uma string Base64.
+ */
+function bufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
+/**
+ * Converte uma string Base64 para um ArrayBuffer.
+ */
+function base64ToBuffer(base64) {
+    // window.atob lançará uma DOMException se a string não for um Base64 válido.
+    const binary_string = window.atob(base64);
+    const len = binary_string.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+/**
+ * Exibe uma notificação (toast).
+ */
+function showToast(message, isError = true) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    
+    toastMessage.textContent = message;
+    toast.className = `fixed bottom-5 right-5 text-white py-2 px-4 rounded-lg shadow-lg transition-opacity duration-300 opacity-100 ${isError ? 'bg-red-500' : 'bg-green-600'}`;
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+    }, 3000);
+}
+
+
+// --- LÓGICA DA INTERFACE DO USUÁRIO (UI) ---
+
+document.addEventListener('DOMContentLoaded', () => {
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const views = document.querySelectorAll('.view');
+    const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
+    const signForm = document.getElementById('sign-form');
+    const verifyForm = document.getElementById('verify-form');
+    const invalidateSearchForm = document.getElementById('invalidate-search-form');
+    const showLoginLink = document.getElementById('show-login');
+    const showRegisterLink = document.getElementById('show-register');
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    // Elementos da área de invalidação
+    const invalidationDetails = document.getElementById('invalidation-details');
+    const invalidateBtn = document.getElementById('invalidate-btn');
+    const restoreBtn = document.getElementById('restore-btn');
+
+    // Navegação entre as visões
+    function switchView(viewName) {
+        views.forEach(view => view.classList.remove('active'));
+        document.getElementById(`view-${viewName}`).classList.add('active');
+        
+        navButtons.forEach(btn => {
+            btn.classList.remove('border-cyan-400', 'text-cyan-400');
+            if(btn.dataset.view === viewName) {
+                btn.classList.add('border-cyan-400', 'text-cyan-400');
+            }
+        });
+        updateUI();
+    }
+    
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => switchView(button.dataset.view));
+    });
+
+    // Alternar entre formulários de login e cadastro
+    showLoginLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('register-form-container').classList.add('hidden');
+        document.getElementById('login-form-container').classList.remove('hidden');
+    });
+
+    showRegisterLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('login-form-container').classList.add('hidden');
+        document.getElementById('register-form-container').classList.remove('hidden');
+    });
+    
+    // Atualiza a interface com base no estado de login
+    function updateUI() {
+        const userInfo = document.getElementById('user-info');
+        const loggedInUserEl = document.getElementById('logged-in-user');
+        const authSection = document.getElementById('auth-section');
+        const assinarLoginRequired = document.getElementById('assinar-login-required');
+        const assinarContent = document.getElementById('assinar-content');
+
+        if (currentUser) {
+            loggedInUserEl.textContent = currentUser;
+            userInfo.classList.remove('hidden');
+            authSection.classList.add('hidden');
+            
+            assinarLoginRequired.classList.add('hidden');
+            assinarContent.classList.remove('hidden');
+        } else {
+            userInfo.classList.add('hidden');
+            authSection.classList.remove('hidden');
+            document.getElementById('register-form-container').classList.remove('hidden');
+            document.getElementById('login-form-container').classList.add('hidden');
+            
+            assinarLoginRequired.classList.remove('hidden');
+            assinarContent.classList.add('hidden');
+        }
+    }
+
+
+    // --- MANIPULADORES DE EVENTOS (HANDLERS) ---
+
+    // Handler de Cadastro
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('register-username').value;
+        const password = document.getElementById('register-password').value;
+
+        if (db.users[username]) {
+            showToast('Nome de usuário já existe.');
+            return;
+        }
+
+        try {
+            showToast('Gerando par de chaves... Isso pode levar um momento.', false);
+            const keyPair = await generateKeys();
+            const publicKeyJwk = await window.crypto.subtle.exportKey('jwk', keyPair.publicKey);
+            const privateKeyJwk = await window.crypto.subtle.exportKey('jwk', keyPair.privateKey);
+
+            // Em um app real, use Argon2 ou PBKDF2 com salt. SHA-256 aqui é apenas para demonstração.
+            const passwordHash = bufferToBase64(await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
+
+            db.users[username] = {
+                publicKey: publicKeyJwk,
+                privateKey: privateKeyJwk,
+                passwordHash: passwordHash
+            };
+            db.save();
+
+            showToast('Cadastro realizado e chaves geradas com sucesso!', false);
+            loginUser(username);
+            registerForm.reset();
+        } catch (error) {
+            console.error(error);
+            showToast('Falha ao gerar chaves. Tente novamente.');
+        }
+    });
+
+    // Handler de Login
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        const user = db.users[username];
+
+        const passwordHash = bufferToBase64(await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(password)));
+        
+        if (user && user.passwordHash === passwordHash) {
+            loginUser(username);
+            loginForm.reset();
+        } else {
+            showToast('Nome de usuário ou senha inválidos.');
+        }
+    });
+    
+    // Handler de Logout
+    logoutBtn.addEventListener('click', () => {
+        currentUser = null;
+        sessionStorage.removeItem('digital_signer_currentUser');
+        updateUI();
+        switchView('home');
+        showToast('Você saiu da sua conta.', false);
+    });
+
+    function loginUser(username) {
+        currentUser = username;
+        sessionStorage.setItem('digital_signer_currentUser', username);
+        updateUI();
+        showToast(`Bem-vindo, ${username}!`, false);
+    }
+    
+    // Handler de Assinatura
+    signForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = document.getElementById('message-to-sign').value;
+        if (!message.trim()) {
+            showToast('A mensagem não pode estar vazia.');
+            return;
+        }
+
+        try {
+            const user = db.users[currentUser];
+            const privateKey = await window.crypto.subtle.importKey(
+                'jwk',
+                user.privateKey,
+                cryptoConfig.keyAlgorithm,
+                true,
+                ['sign']
+            );
+
+            const signature = await signMessage(privateKey, message);
+            const signatureId = crypto.randomUUID();
+
+            db.signatures[signatureId] = {
+                text: message,
+                signature: signature,
+                signer: currentUser,
+                algorithm: 'RSA-PSS com SHA-256',
+                timestamp: new Date().toISOString()
+            };
+            db.save();
+            
+            document.getElementById('signature-id').textContent = signatureId;
+            document.getElementById('signature-data').textContent = signature;
+            document.getElementById('signer-public-key').textContent = JSON.stringify(user.publicKey, null, 2);
+            document.getElementById('signature-result').classList.remove('hidden');
+
+        } catch (error) {
+            console.error("Erro ao assinar:", error);
+            showToast('Ocorreu um erro ao assinar a mensagem.');
+        }
+    });
+    
+    // Handler de Verificação - ** VERSÃO ROBUSTA **
+    verifyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const signatureId = document.getElementById('verify-signature-id').value.trim();
+        
+        const resultContainer = document.getElementById('verification-result');
+        const statusEl = document.getElementById('verification-status');
+        const detailsContainer = document.getElementById('verification-details');
+
+        const logEntry = {
+            signatureId: signatureId,
+            verifierIp: '127.0.0.1', // Simulado
+            timestamp: new Date().toISOString(),
+            isValid: false,
+        };
+
+        const setInvalidState = (reason) => {
+            statusEl.textContent = 'ASSINATURA INVÁLIDA';
+            statusEl.className = 'text-2xl font-bold mb-4 text-center text-red-500';
+            detailsContainer.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
+            if (reason) showToast(reason);
+        };
+
+        try {
+            const signatureData = db.signatures[signatureId];
+            if (!signatureData) {
+                setInvalidState('ID da Assinatura não encontrado.');
+                logEntry.error = 'ID não encontrado';
+                return;
+            }
+
+            const signer = db.users[signatureData.signer];
+            if (!signer) {
+                setInvalidState(`Signatário '${signatureData.signer}' não encontrado.`);
+                logEntry.error = 'Signatário não encontrado';
+                return;
+            }
+
+            const publicKey = await window.crypto.subtle.importKey(
+                'jwk',
+                signer.publicKey,
+                cryptoConfig.keyAlgorithm,
+                true,
+                ['verify']
+            );
+
+            const isValid = await verifySignature(publicKey, signatureData.signature, signatureData.text);
+            logEntry.isValid = isValid;
+
+            if (isValid) {
+                statusEl.textContent = 'ASSINATURA VÁLIDA';
+                statusEl.className = 'text-2xl font-bold mb-4 text-center text-green-400';
+                document.getElementById('verified-signer').textContent = signatureData.signer;
+                document.getElementById('verified-timestamp').textContent = new Date(signatureData.timestamp).toLocaleString('pt-BR');
+                document.getElementById('verified-algorithm').textContent = signatureData.algorithm;
+                document.getElementById('verified-message').textContent = signatureData.text;
+                detailsContainer.classList.remove('hidden');
+            } else {
+                setInvalidState('A verificação criptográfica falhou.');
+                logEntry.error = 'Verificação falhou';
+            }
+            resultContainer.classList.remove('hidden');
+
+        } catch (error) {
+            console.error("Falha crítica na verificação:", error);
+            logEntry.error = error.message;
+            setInvalidState('A assinatura está corrompida ou malformada.');
+        } finally {
+            db.logs.push(logEntry);
+            db.save();
+        }
+    });
+    
+    // Handlers da área de Invalidação
+    invalidateSearchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const signatureId = document.getElementById('invalidate-signature-id').value.trim();
+        const signatureData = db.signatures[signatureId];
+
+        if (signatureData) {
+            invalidationDetails.dataset.signatureId = signatureId;
+            invalidationDetails.dataset.originalSignature = signatureData.signature; // Salva a original
+            document.getElementById('invalidate-id-display').textContent = signatureId;
+            document.getElementById('invalidate-current-signature').textContent = signatureData.signature;
+            invalidationDetails.classList.remove('hidden');
+            restoreBtn.classList.add('hidden');
+            invalidateBtn.classList.remove('hidden');
+        } else {
+            showToast('ID da Assinatura não encontrado.');
+            invalidationDetails.classList.add('hidden');
+        }
+    });
+
+    invalidateBtn.addEventListener('click', () => {
+        const signatureId = invalidationDetails.dataset.signatureId;
+        const currentSignature = db.signatures[signatureId].signature;
+        
+        // Corrompe a assinatura trocando o primeiro caractere por 'X'
+        const corruptedSignature = 'X' + currentSignature.slice(1);
+        
+        db.signatures[signatureId].signature = corruptedSignature;
+        db.save();
+        
+        document.getElementById('invalidate-current-signature').textContent = corruptedSignature;
+        invalidateBtn.classList.add('hidden');
+        restoreBtn.classList.remove('hidden');
+        showToast('Assinatura invalidada com sucesso!', false);
+    });
+
+    restoreBtn.addEventListener('click', () => {
+        const signatureId = invalidationDetails.dataset.signatureId;
+        const originalSignature = invalidationDetails.dataset.originalSignature;
+
+        db.signatures[signatureId].signature = originalSignature;
+        db.save();
+
+        document.getElementById('invalidate-current-signature').textContent = originalSignature;
+        restoreBtn.classList.add('hidden');
+        invalidateBtn.classList.remove('hidden');
+        showToast('Assinatura original restaurada!', false);
+    });
+
+
+    // Estado inicial
+    switchView('home');
+    updateUI();
+});
+</script>
+</body>
+</html>
+
