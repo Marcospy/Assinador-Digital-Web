@@ -1,12 +1,12 @@
 # Assinador Digital Web
 
-## 📖 Sobre o Projeto
+## Sobre o Projeto
 
 Aplicação web de página única (Single Page Application) que implementa um sistema completo de assinatura e verificação de assinaturas digitais.
 
 Toda a lógica de criptografia (geração de chaves, assinatura e verificação) é executada no lado do cliente (navegador) utilizando a **Web Crypto API**. O `localStorage` do navegador é utilizado para simular o banco de dados.
 
-## ✨ Funcionalidades
+## Funcionalidades
 
 * **Cadastro de Usuário:** Criação de um novo usuário com a geração automática de um par de chaves (pública e privada) **RSA-PSS**.
 * **Assinatura de Mensagens:** Usuários autenticados podem digitar um texto e assiná-lo digitalmente com sua chave privada.
@@ -14,20 +14,20 @@ Toda a lógica de criptografia (geração de chaves, assinatura e verificação)
 * **Log de Verificações:** Cada tentativa de verificação (bem-sucedida ou não) é registrada.
 * **Ferramenta de Teste:** Uma aba dedicada permite invalidar e restaurar assinaturas intencionalmente para demonstrar os casos de teste negativo e positivo.
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 * **HTML5**
 * **Tailwind CSS** para estilização.
 * **JavaScript (ES6+)** para toda a lógica da aplicação.
 * **Web Crypto API** para todas as operações criptográficas.
 
-## 🚀 Como Executar
+## Como Executar
 
 1.  Baixe o arquivo `assinador-digital.html`.
 2.  Abra o arquivo em qualquer navegador web moderno (Google Chrome, Firefox, Microsoft Edge, etc.).
 3.  A aplicação é totalmente funcional e autocontida, não necessitando de um servidor.
 
-## ✅ Casos de Teste
+## Casos de Teste
 
 Para realizar os testes de validação positiva e negativa:
 
